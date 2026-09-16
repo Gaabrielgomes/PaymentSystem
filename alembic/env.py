@@ -1,5 +1,6 @@
 from app.db.base import Base
 from app.models import payment
+from app.models import outbox_event
 from app.core.config import settings
 
 from logging.config import fileConfig
