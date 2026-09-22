@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class PaymentCreate(BaseModel):
     idempotency_key: str
@@ -13,5 +13,4 @@ class PaymentResponse(BaseModel):
     amount: Decimal
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
