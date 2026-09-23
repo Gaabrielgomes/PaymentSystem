@@ -16,7 +16,12 @@ def get_channel():
 
 def publish_pending_events():
     db = SessionLocal()
-    connection, channel = get_channel()
+    try:
+        connection, channel = get_channel()
+    except Exception:
+        db.close()
+        raise
+
     try:
         pending = db.query(OutboxEvent).filter(OutboxEvent.status == "PENDING").all()
 

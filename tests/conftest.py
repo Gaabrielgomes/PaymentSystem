@@ -1,4 +1,7 @@
 import pytest
+import app.relay as relay_module
+import app.consumer as consumer_module
+from unittest.mock import patch
 from testcontainers.community.postgres import PostgresContainer
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -17,7 +20,8 @@ def engine(postgres_container):
     url = postgres_container.get_connection_url()
     engine = create_engine(url)
     Base.metadata.create_all(engine)
-    return engine
+    yield engine
+    engine.dispose()
 
 @pytest.fixture
 def db_session(engine):
@@ -50,3 +54,36 @@ def concurrent_client(engine):
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+@pytest.fixture
+def relay_session_factory(engine):
+    Session = sessionmaker(bind=engine)
+    created_sessions = []
+
+    def factory():
+        session = Session()
+        created_sessions.append(session)
+        return session
+
+    with patch.object(relay_module, "SessionLocal", factory):
+        yield factory
+
+    for session in created_sessions:
+        session.close()
+
+
+@pytest.fixture
+def consumer_session_factory(engine):
+    Session = sessionmaker(bind=engine)
+    created_sessions = []
+
+    def factory():
+        session = Session()
+        created_sessions.append(session)
+        return session
+
+    with patch.object(consumer_module, "SessionLocal", factory):
+        yield factory
+
+    for session in created_sessions:
+        session.close()
