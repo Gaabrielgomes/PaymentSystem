@@ -5,6 +5,10 @@ from app.db.session import get_db
 from app.models.payment import Payment
 from app.models.outbox_event import OutboxEvent
 from app.schemas.payment import PaymentCreate, PaymentResponse
+from app.core.metrics import payments_created_total, payments_duplicate_blocked_total
+from app.core.log_config import setup_logging
+
+logger = setup_logging("api")
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -15,6 +19,8 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
     ).first()
 
     if existing:
+        payments_duplicate_blocked_total.inc()
+        logger.info(f"Repeated idempotency key: {payload.idempotency_key}")
         return existing
 
     payment = Payment(
@@ -39,10 +45,13 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
             status = "PENDING"
         )
         db.add(event)
-
         db.commit()
+        payments_created_total.inc()
+        logger.info(f"Payment created: {payment.id}")
     except IntegrityError:
         db.rollback()
+        payments_duplicate_blocked_total.inc()
+        logger.info(f"Concurrency issue detected for key: {payload.idempotency_key}")
         return db.query(Payment).filter(
             Payment.idempotency_key == payload.idempotency_key
         ).first()
