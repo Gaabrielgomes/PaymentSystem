@@ -4,7 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import SessionLocal
 from app.models.processed_event import ProcessedEvent
 from app.core.config import settings
+from prometheus_client import start_http_server
+from app.core.log_config import setup_logging
+from app.core.metrics import consumer_events_processed_total, consumer_events_duplicate_total
 
+logger = setup_logging("consumer")
 QUEUE_NAME = "payments_events"
 
 def process_payment_event(payload: dict):
@@ -19,12 +23,14 @@ def on_message(channel, method, properties, body):
         ).first()
 
         if already_processed:
-            print(f"Event {event_id} already processed, ignoring.")
+            consumer_events_duplicate_total.inc()
+            logger.info(f"Event {event_id} already processed, ignoring.")
             channel.basic_ack(delivery_tag=method.delivery_tag)
             return
 
         payload = json.loads(body)
         process_payment_event(payload)
+        consumer_events_processed_total.inc()
 
         try:
             db.add(ProcessedEvent(event_id=event_id))
@@ -50,7 +56,8 @@ def main():
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(queue=QUEUE_NAME, on_message_callback=on_message)
 
-    print("Consumer awaiting messages...")
+    start_http_server(8002)
+    logger.info("Metrics server for consumer available at port :8002/metrics")
     channel.start_consuming()
 
 if __name__ == "__main__":
