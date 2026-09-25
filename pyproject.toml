@@ -1,3 +1,0 @@
-[tool.ruff]
-extend-exclude = ["alembic", "tests"]
-force-exclude = true

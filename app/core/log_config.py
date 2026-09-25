@@ -1,7 +1,6 @@
 import logging
 import sys
 
-
 def setup_logging(service_name: str):
     logging.basicConfig(
         level=logging.INFO,

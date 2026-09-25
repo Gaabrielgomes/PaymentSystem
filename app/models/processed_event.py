@@ -1,10 +1,8 @@
+import uuid
 from datetime import datetime
-
 from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-
 from app.db.base import Base
-
 
 class ProcessedEvent(Base):
     __tablename__ = "processed_events"
