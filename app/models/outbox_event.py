@@ -1,11 +1,8 @@
 import uuid
 from datetime import datetime
-
-from sqlalchemy import Column, DateTime, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-
+from sqlalchemy import Column, String, DateTime
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.db.base import Base
-
 
 class OutboxEvent(Base):
     __tablename__ = "outbox_events"

@@ -1,11 +1,8 @@
 import uuid
 from datetime import datetime
-
-from sqlalchemy import Column, DateTime, Numeric, String
+from sqlalchemy import Column, String, Numeric, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-
 from app.db.base import Base
-
 
 class Payment(Base):
     __tablename__ = "payments"
