@@ -45,7 +45,7 @@ jobs:
       POSTGRES_DB: payments
       DATABASE_URL: postgresql://ci_user:ci_password@localhost:5433/payments
       RABBITMQ_USER: ci_user
-      RABBITMQ_PASSWORD: ci_password
+      RABBITMQ_PASS: ci_password
     steps:
       - uses: actions/checkout@v4
 
