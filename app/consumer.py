@@ -1,26 +1,33 @@
 import json
+
 import pika
+from prometheus_client import start_http_server
 from sqlalchemy.exc import IntegrityError
+
+from app.core.config import settings
+from app.core.log_config import setup_logging
+from app.core.metrics import (
+    consumer_events_duplicate_total,
+    consumer_events_processed_total,
+)
 from app.db.session import SessionLocal
 from app.models.processed_event import ProcessedEvent
-from app.core.config import settings
-from prometheus_client import start_http_server
-from app.core.log_config import setup_logging
-from app.core.metrics import consumer_events_processed_total, consumer_events_duplicate_total
 
 logger = setup_logging("consumer")
 QUEUE_NAME = "payments_events"
 
+
 def process_payment_event(payload: dict):
     print(f"Processing payment: {payload}")
+
 
 def on_message(channel, method, properties, body):
     event_id = properties.message_id
     db = SessionLocal()
     try:
-        already_processed = db.query(ProcessedEvent).filter(
-            ProcessedEvent.event_id == event_id
-        ).first()
+        already_processed = (
+            db.query(ProcessedEvent).filter(ProcessedEvent.event_id == event_id).first()
+        )
 
         if already_processed:
             consumer_events_duplicate_total.inc()
@@ -40,11 +47,12 @@ def on_message(channel, method, properties, body):
             print(f"Event {event_id} already processed by another instance.")
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
-    except Exception as e:
-        print(f"Error processing event {event_id}: {e}")
+    except Exception:
+        logger.exception("Error processing event %s", event_id)
         channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
     finally:
         db.close()
+
 
 def main():
     credentials = pika.PlainCredentials(settings.rabbitmq_user, settings.rabbitmq_pass)
@@ -59,6 +67,7 @@ def main():
     start_http_server(8002)
     logger.info("Metrics server for consumer available at port :8002/metrics")
     channel.start_consuming()
+
 
 if __name__ == "__main__":
     main()

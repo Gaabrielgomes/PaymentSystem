@@ -1,22 +1,28 @@
-import time
 import json
+import time
+
 import pika
 from prometheus_client import start_http_server
-from app.db.session import SessionLocal
-from app.models.outbox_event import OutboxEvent
+
 from app.core.config import settings
 from app.core.log_config import setup_logging
 from app.core.metrics import outbox_events_published_total
+from app.db.session import SessionLocal
+from app.models.outbox_event import OutboxEvent
 
 logger = setup_logging("relay")
 QUEUE_NAME = "payments_events"
 
+
 def get_channel():
     credentials = pika.PlainCredentials(settings.rabbitmq_user, settings.rabbitmq_pass)
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost", credentials=credentials))
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host="localhost", credentials=credentials)
+    )
     channel = connection.channel()
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
     return connection, channel
+
 
 def publish_pending_events():
     db = SessionLocal()
@@ -49,6 +55,7 @@ def publish_pending_events():
     finally:
         db.close()
         connection.close()
+
 
 if __name__ == "__main__":
     start_http_server(8001)
